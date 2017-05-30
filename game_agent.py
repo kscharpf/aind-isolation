@@ -44,6 +44,12 @@ def is_not_reflectable(newPosition, player1Pos):
 def does_reflect(newPosition, player2Pos):
     return abs(newPosition[0] - player2Pos[0]) == abs(newPosition[1] - player2Pos[1])
 
+def distance_to_player(game, p1, p2):
+    p1pos = game.get_player_location(p1)
+    p2pos = game.get_player_location(p2)
+
+    return float((p1pos[0] - p2pos[0])**2 + (p1pos[1] - p2pos[1])**2)
+
 def custom_score(game, player):
     """Calculate the heuristic value of a game state from the point of view
     of the given player.
@@ -74,18 +80,7 @@ def custom_score(game, player):
     if game.is_loser(player):
         return float("-inf")
 
-    if game.move_count == 0:
-        if game.get_player_location(player) == (game.height//2, game.width//2):
-            return float(999)
-    elif game.move_count % 2 == 1:
-        if is_not_reflectable(game.get_player_location(player), game.get_player_location(game.get_opponent(player))): 
-            return float(999)
-    elif game.move_count % 2 == 0:
-        if does_reflect(game.get_player_location(player), game.get_player_location(game.get_opponent(player))):
-            return float(999)
-
-    return float(len(game.get_legal_moves(player)) - len(game.get_legal_moves(game.get_opponent(player))))
-    raise NotImplementedError
+    return 1.0/(distance_to_player(game, player, game.get_opponent(player)))
 
 
 def custom_score_2(game, player):
@@ -111,7 +106,17 @@ def custom_score_2(game, player):
         The heuristic value of the current game state to the specified player.
     """
     # TODO: finish this function!
-    return float(len(game.get_legal_moves(player)))
+    if game.is_winner(player):
+        return 100000.0 / game.move_count
+        #return float("inf")
+    if game.is_loser(player):
+        return -100000.0/game.move_count
+        #return float("-inf")
+    if len(game.get_legal_moves(game.get_opponent(player))) == 0:
+        return 100000.0 / game.move_count
+        #return float("inf")
+
+    return float(len(game.get_legal_moves(player))) / float(len(game.get_legal_moves(game.get_opponent(player))))
 
 
 def custom_score_3(game, player):
@@ -137,8 +142,11 @@ def custom_score_3(game, player):
         The heuristic value of the current game state to the specified player.
     """
     # TODO: finish this function!
-    return float(len(game.get_legal_moves(game.active_player)) - len(game.get_legal_moves(game.inactive_player)))
-    raise NotImplementedError
+    if game.is_winner(player):
+        return float("inf")
+    if game.is_loser(player):
+        return float("-inf")
+    return -float(len(game.get_legal_moves(game.get_opponent(player))))
 
 
 class IsolationPlayer:
@@ -298,7 +306,7 @@ class MinimaxPlayer(IsolationPlayer):
         best_move = (-1, -1)
         moves = game.get_legal_moves(game.active_player)
         if moves:
-            best_move = moves[0]
+            best_move = moves[random.randint(0,len(moves)-1)]
         bestVal = float("-inf")
         for m in moves:
             game2 = game.forecast_move(m)
@@ -363,7 +371,7 @@ class AlphaBetaPlayer(IsolationPlayer):
         if best_move == (-1,-1):
             moves = game.get_legal_moves(game.active_player)
             if moves:
-                return moves[0]
+                best_move = moves[random.randint(0,len(moves)-1)]
         return best_move
 
     def alphabeta_maxvalue(self, game, depth, alpha, beta):
