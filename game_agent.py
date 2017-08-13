@@ -4,8 +4,6 @@ and include the results in your report.
 """
 import random
 
-score_cache = {}
-
 def open_move_score(game, player):
     """The basic evaluation function described in lecture that outputs a score
     equal to the number of moves open for your computer player on the board.
@@ -37,12 +35,6 @@ def open_move_score(game, player):
 class SearchTimeout(Exception):
     """Subclass base exception for code clarity. """
     pass
-
-def is_not_reflectable(newPosition, player1Pos):
-    return abs(newPosition[0] - player1Pos[0]) != abs(newPosition[1] - player1Pos[1])
-
-def does_reflect(newPosition, player2Pos):
-    return abs(newPosition[0] - player2Pos[0]) == abs(newPosition[1] - player2Pos[1])
 
 def distance_to_player(game, p1, p2):
     p1pos = game.get_player_location(p1)
@@ -80,8 +72,7 @@ def custom_score(game, player):
     if game.is_loser(player):
         return float("-inf")
 
-    return 1.0/(distance_to_player(game, player, game.get_opponent(player)))
-
+    return 1.*len(game.get_legal_moves(player)) - 2. * len(game.get_legal_moves(game.get_opponent(player)))
 
 def custom_score_2(game, player):
     """Calculate the heuristic value of a game state from the point of view
@@ -106,21 +97,70 @@ def custom_score_2(game, player):
         The heuristic value of the current game state to the specified player.
     """
     # TODO: finish this function!
-    if game.is_winner(player):
-        return 100000.0 / game.move_count
-        #return float("inf")
-    if game.is_loser(player):
-        return -100000.0/game.move_count
-        #return float("-inf")
-    if len(game.get_legal_moves(game.get_opponent(player))) == 0:
-        return 100000.0 / game.move_count
-        #return float("inf")
 
-    return float(len(game.get_legal_moves(player))) / float(len(game.get_legal_moves(game.get_opponent(player))))
+    if game.is_loser(player):
+        return float("-inf")
+    if game.is_winner(player):
+        return float("inf")
+
+    return distance_to_player(game, player, game.get_opponent(player))
+        
+PositionValue = {
+        (0,0):-50.,
+        (0,1):-40.,
+        (0,2):-30.,
+        (0,3):-30.,
+        (0,4):-30.,
+        (0,5):-40.,
+        (0,6):-50.,
+        (6,1):-40.,
+        (6,2):-30.,
+        (6,3):-30.,
+        (6,4):-30.,
+        (6,5):-40.,
+        (6,6):-50.,
+        (1,0):-40.,
+        (2,0):-30.,
+        (3,0):-30.,
+        (4,0):-30.,
+        (5,0):-40.,
+        (6,0):-50.,
+        (1,6):-40.,
+        (2,6):-30.,
+        (3,6):-30.,
+        (4,6):-30.,
+        (5,6):-40.,
+        (6,6):-50.,
+        (1,1):-20.,
+        (1,2):0.,
+        (1,3):0.,
+        (1,4):0.,
+        (1,5):-20.,
+        (2,1):0.,
+        (3,1):0.,
+        (4,1):0.,
+        (5,1):-20.,
+        (5,2):0.,
+        (5,3):0.,
+        (5,4):0.,
+        (5,5):-20.,
+        (2,5):0.,
+        (3,5):0.,
+        (4,5):0.,
+        (2,2):10.,
+        (2,3):15.,
+        (2,4):10.,
+        (3,2):15.,
+        (4,2):10.,
+        (4,3):15.,
+        (4,4):10.,
+        (3,4):10.,
+        (3,3):20.}
 
 
 def custom_score_3(game, player):
     """Calculate the heuristic value of a game state from the point of view
+    player_loc = game.get_player_location(player)
     of the given player.
 
     Note: this function should be called from within a Player instance as
@@ -146,8 +186,9 @@ def custom_score_3(game, player):
         return float("inf")
     if game.is_loser(player):
         return float("-inf")
-    return -float(len(game.get_legal_moves(game.get_opponent(player))))
 
+    return PositionValue[game.get_player_location(player)] * len(game.get_legal_moves(player)) -  \
+           PositionValue[game.get_player_location(game.get_opponent(player))] * len(game.get_legal_moves(game.get_opponent(player)))
 
 class IsolationPlayer:
     """Base class for minimax and alphabeta agents -- this class is never
@@ -176,6 +217,9 @@ class IsolationPlayer:
         self.score = score_fn
         self.time_left = None
         self.TIMER_THRESHOLD = timeout
+        self.name=""
+    def __repr__(self):
+        return "IsolationPlayer:{}".format(self.name)
 
 
 class MinimaxPlayer(IsolationPlayer):
@@ -355,6 +399,7 @@ class AlphaBetaPlayer(IsolationPlayer):
         """
         self.time_left = time_left
         best_move = (-1, -1)
+        best_val = float("-inf")
 
         try:
             # The try/except block will automatically catch the exception
@@ -363,6 +408,11 @@ class AlphaBetaPlayer(IsolationPlayer):
             while True:
                 best_move = self.alphabeta(game, depth)
                 depth += 1
+                #if depth > 6:
+                    #print("break")
+                    #break
+                if best_move == (-1,-1):
+                    break
 
         except SearchTimeout:
             pass
@@ -409,7 +459,6 @@ class AlphaBetaPlayer(IsolationPlayer):
             if bestV <= alpha:
                 return bestV
             beta = min(beta, bestV)
-
         return bestV
 
     def alphabeta(self, game, depth, alpha=float("-inf"), beta=float("inf")):
